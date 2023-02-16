@@ -7,24 +7,13 @@
 #define HISTORY_SIZE 10
 
 typedef struct CommandArguments {
-    char *command;
     char **full_command;
+    char *command;
     int background;
 } CommandArguments;
 
-typedef struct CommandHistory {
-    char command[MAX_LINE];
-} CommandHistory;
-
 static char buffer[BUFFER_SIZE];
-static CommandHistory commandHistory[HISTORY_SIZE];
+static CommandArguments *commandHistory[HISTORY_SIZE];
 static int historyIndex = 0;
 
-void remove_new_line(char* string) {
-    int length = strlen(string);
-    printf("%s ", string);
-    if((length > 0) && (string[length-1] == '\n'))
-    {
-        string[length-1] ='\0';
-    }
-}
+void runCommand(CommandArguments *);

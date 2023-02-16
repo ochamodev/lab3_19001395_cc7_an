@@ -8,22 +8,12 @@
 
 #include "my_shell.h"
 
-void runCommand(CommandArguments *);
-
-void runCommand(CommandArguments *commandArgs) {
-    char *command = commandArgs->full_command[0];
-    execvp(commandArgs->full_command[0], commandArgs->full_command);
-}
-
 void setup(char inputBuffer[], CommandArguments *command_args) { 
     int length; /* # of characters in the command line */
    //read what the user enters on the command line
     length = read(STDIN_FILENO, inputBuffer, MAX_LINE);
     inputBuffer[length -1] = '\0';
-    //remove_new_line(inputBuffer);
-    strcpy(commandHistory[historyIndex].command, inputBuffer);
-
-
+    strcpy(command_args->command, inputBuffer);
     char *parsed;
     char *separator = " ";
     int index = 0;
@@ -31,7 +21,7 @@ void setup(char inputBuffer[], CommandArguments *command_args) {
 
     parsed = strtok(inputBuffer, separator);
     while (parsed != NULL) {
-        if (parsed[index] == 38) {
+        if (strcmp(parsed, "&") == 0) {
             command_args->background = 1;
         } else {
             command_args->full_command[index] = parsed;
@@ -39,38 +29,14 @@ void setup(char inputBuffer[], CommandArguments *command_args) {
         parsed = strtok(NULL, separator);
         index++;
     }
-    runCommand(command_args);
-        /*if (index == 0) {
-            command_args->command = parsed;
-            index++;
-        } else {
-            char x = parsed[0];
-            int result = x == 38;
-            if (result) {
-                command_args->background = 1;
-            } else {
-                command_args->args[argsIndex] = parsed;
-                argsIndex++;
-            }
-        }/
-        parsed = strtok(NULL, separator);
-        index++;
+
+    if(command_args->background == 1) {
+        command_args->full_command[index] = "";
+    } else {
+        command_args->full_command[index +1] = "\n";
     }
 
-    runCommand(command_args);
-
-    /*pid_t child_pid = fork();
-        if (child_pid == 0) {
-            
-        }
-
-        if (command_args->background == 1) {
-
-        } else {
-            waitpid(child_pid, NULL, 0);
-        }
-    */
-   //         Implement me   <<<------
+    commandHistory[historyIndex] = command_args;
 } 
 
 /*
@@ -81,34 +47,47 @@ void setup(char inputBuffer[], CommandArguments *command_args) {
 void handle_SIGINT() {
     strcpy(buffer,"\nImprimiendo historial de comandos\n");
     write(STDOUT_FILENO, buffer, strlen(buffer));
-    for (int i = 0; i < HISTORY_SIZE; i++) {
-        CommandHistory c = commandHistory[i];
-        strcpy(buffer, c.command);
-        write(STDOUT_FILENO, buffer, strlen(buffer));
+    for (int i = 0; i < historyIndex; i++) {
+        CommandArguments *c = commandHistory[i];
+        char *cmd = strcat(c->command, "\n");
+        write(STDOUT_FILENO, cmd, strlen(cmd));
     }
     strcpy(buffer, "Seleccione el comando que desea ejecutar->\n");
     write(STDOUT_FILENO, buffer, strlen(buffer));
-    char inputBuffer[MAX_LINE];
     exit(0);
 }
 
 int main(int argc, char *argv[]) {
 	char inputBuffer[MAX_LINE];
-    CommandArguments *commandArgs = malloc(sizeof(CommandArguments));
-    commandArgs->full_command = malloc (((MAX_LINE / 2) - 1) * sizeof(char *));
+    CommandArguments *commandArgs;
+    // setear funcion de historial.
     struct sigaction handler;
     handler.sa_handler = &handle_SIGINT;
     sigaction(SIGINT, &handler, NULL);
+    
+    pid_t child_pid;
+
     while (1) {
         printf("COMMAND->\n");
         if (historyIndex == 9) {
             historyIndex = 0;
         }
-        
+
+        commandArgs = malloc(sizeof(CommandArguments));
+        commandArgs->command = (char *) malloc(sizeof(char *));
+        commandArgs->full_command = malloc (((MAX_LINE / 2) - 1) * sizeof(char *));
         setup(inputBuffer, commandArgs);
         historyIndex++;
+        child_pid = fork();
 
-
+        if (child_pid == 0) {
+            if (commandArgs->background == 0) {
+                execvp(commandArgs->full_command[0], commandArgs->full_command);    
+            } else {
+                execvp(commandArgs->full_command[0], commandArgs->full_command);
+                waitpid(child_pid, NULL, 0);
+            }
+        }
     }
     free(commandArgs);
 	return 0;
