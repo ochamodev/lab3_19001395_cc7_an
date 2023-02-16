@@ -19,6 +19,8 @@ void setup(char inputBuffer[], CommandArguments *command_args) {
     int index = 0;
     int argsIndex = 0;
 
+    command_args->firstL = inputBuffer[0];
+
     parsed = strtok(inputBuffer, separator);
     while (parsed != NULL) {
         if (strcmp(parsed, "&") == 0) {
@@ -43,7 +45,6 @@ void setup(char inputBuffer[], CommandArguments *command_args) {
     Calls exec
 */
 
-
 void handle_SIGINT() {
     strcpy(buffer,"\nImprimiendo historial de comandos\n");
     write(STDOUT_FILENO, buffer, strlen(buffer));
@@ -54,6 +55,24 @@ void handle_SIGINT() {
     }
     strcpy(buffer, "Seleccione el comando que desea ejecutar->\n");
     write(STDOUT_FILENO, buffer, strlen(buffer));
+    int length = read(STDIN_FILENO, buffer, MAX_LINE);
+    buffer[length -1] = '\0';
+    printf("%d ", strlen(buffer));
+
+    char *parsed;
+    char *separator = " ";
+    int index = 0;
+
+    // length 1 si solo ponen r
+
+    if (strlen(buffer) == 1) {
+        CommandArguments *c = commandHistory[historyIndex];
+        char *cmd = strcat(c->command, "\n");
+        write(STDOUT_FILENO, cmd, strlen(cmd));
+    } else {
+        // length 3 si ponen r x
+    }
+
     exit(0);
 }
 

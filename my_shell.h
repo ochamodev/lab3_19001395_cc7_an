@@ -9,6 +9,7 @@
 typedef struct CommandArguments {
     char **full_command;
     char *command;
+    char firstL;
     int background;
 } CommandArguments;
 
@@ -17,3 +18,7 @@ static CommandArguments *commandHistory[HISTORY_SIZE];
 static int historyIndex = 0;
 
 void runCommand(CommandArguments *);
+
+int startsWith(char * str, char character) {
+    return (str[0] == character);
+}
