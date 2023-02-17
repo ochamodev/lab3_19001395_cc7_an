@@ -13,12 +13,36 @@ typedef struct CommandArguments {
     int background;
 } CommandArguments;
 
+typedef struct CommandHistory {
+    int size;
+    CommandArguments *commandHistory[HISTORY_SIZE];
+} CommandHistory;
+
+typedef struct SelectedCommand {
+    int i;
+} SelectedCommand;
+
 static char buffer[BUFFER_SIZE];
-static CommandArguments *commandHistory[HISTORY_SIZE];
-static int historyIndex = 0;
+static CommandHistory *commandHistory;
+//static CommandArguments *commandHistory[HISTORY_SIZE];
+static int historyIndex = -1;
 
 void runCommand(CommandArguments *);
 
 int startsWith(char * str, char character) {
     return (str[0] == character);
 }
+
+void getCommandIndex(SelectedCommand *, char argument);
+
+void getCommandIndex(SelectedCommand *selected, char argument) {
+    int size = commandHistory->size;
+    for (int i = 0; i < size; i++) {
+        CommandArguments *c = commandHistory->commandHistory[i];
+        if (c->full_command[0][0] == argument) {
+            selected->i = i;
+        }
+    }
+}
+
+void init();

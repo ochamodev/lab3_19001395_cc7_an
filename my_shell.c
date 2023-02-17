@@ -33,12 +33,13 @@ void setup(char inputBuffer[], CommandArguments *command_args) {
     }
 
     if(command_args->background == 1) {
-        command_args->full_command[index] = "";
+        command_args->full_command[index];
+        command_args->full_command[index + 1] = NULL;
     } else {
-        command_args->full_command[index +1] = "\n";
+        command_args->full_command[index +1] = NULL;
     }
 
-    commandHistory[historyIndex] = command_args;
+    commandHistory->commandHistory[commandHistory->size] = command_args;
 } 
 
 /*
@@ -48,16 +49,17 @@ void setup(char inputBuffer[], CommandArguments *command_args) {
 void handle_SIGINT() {
     strcpy(buffer,"\nImprimiendo historial de comandos\n");
     write(STDOUT_FILENO, buffer, strlen(buffer));
-    for (int i = 0; i < historyIndex; i++) {
-        CommandArguments *c = commandHistory[i];
+    for (int i = 0; i < commandHistory->size; i++) {
+        CommandArguments *c = commandHistory->commandHistory[i];
         char *cmd = strcat(c->command, "\n");
         write(STDOUT_FILENO, cmd, strlen(cmd));
     }
     strcpy(buffer, "Seleccione el comando que desea ejecutar->\n");
+    char read_buffer[BUFFER_SIZE];
     write(STDOUT_FILENO, buffer, strlen(buffer));
-    int length = read(STDIN_FILENO, buffer, MAX_LINE);
-    buffer[length -1] = '\0';
-    printf("%d ", strlen(buffer));
+    int length = read(STDIN_FILENO, read_buffer, MAX_LINE);
+   
+    read_buffer[length -1] = '\0';
 
     char *parsed;
     char *separator = " ";
@@ -65,49 +67,66 @@ void handle_SIGINT() {
 
     // length 1 si solo ponen r
 
-    if (strlen(buffer) == 1) {
-        CommandArguments *c = commandHistory[historyIndex];
+    
+
+    if (strlen(read_buffer) == 1) {
+        int size = commandHistory->size;
+        CommandArguments *c = commandHistory->commandHistory[size -1];
         char *cmd = strcat(c->command, "\n");
-        write(STDOUT_FILENO, cmd, strlen(cmd));
+        
+        strcpy(read_buffer, cmd);
+        write(STDOUT_FILENO, read_buffer, strlen(read_buffer));
+        execvp(c->full_command[0], c->full_command);
     } else {
         // length 3 si ponen r x
+        char start = read_buffer[2];
+        SelectedCommand *selected = malloc(sizeof(SelectedCommand));
+        getCommandIndex(selected, start);
+        CommandArguments *c = commandHistory->commandHistory[selected->i];
+        char *cmd = strcat(c->command, "\n");
+        write(STDOUT_FILENO, cmd, strlen(cmd));
+        execvp(c->full_command[0], c->full_command);
     }
 
     exit(0);
 }
 
 int main(int argc, char *argv[]) {
-	char inputBuffer[MAX_LINE];
+	char inputBuffer[MAX_LINE] = {'\0'};
     CommandArguments *commandArgs;
-    // setear funcion de historial.
+    commandHistory = malloc(sizeof(CommandHistory));
+    commandHistory->size = 0;
+    pid_t child_pid;
+
     struct sigaction handler;
     handler.sa_handler = &handle_SIGINT;
     sigaction(SIGINT, &handler, NULL);
-    
-    pid_t child_pid;
+
+    int x = 0;
 
     while (1) {
         printf("COMMAND->\n");
-        if (historyIndex == 9) {
-            historyIndex = 0;
+        if (commandHistory->size == 9) {
+            commandHistory->size = 0;
         }
-
         commandArgs = malloc(sizeof(CommandArguments));
         commandArgs->command = (char *) malloc(sizeof(char *));
         commandArgs->full_command = malloc (((MAX_LINE / 2) - 1) * sizeof(char *));
         setup(inputBuffer, commandArgs);
-        historyIndex++;
+        commandHistory->size++;
+        
+        pid_t p = getpid();
         child_pid = fork();
-
         if (child_pid == 0) {
             if (commandArgs->background == 0) {
                 execvp(commandArgs->full_command[0], commandArgs->full_command);    
             } else {
                 execvp(commandArgs->full_command[0], commandArgs->full_command);
-                waitpid(child_pid, NULL, 0);
+                waitpid(p, NULL, 0);
             }
         }
     }
     free(commandArgs);
+    free(commandHistory);
 	return 0;
 }
